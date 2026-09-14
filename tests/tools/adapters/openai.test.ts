@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import { fromOpenAi, toOpenAi, OpenAiComputerCall } from './openai';
-import { ToolResult } from '../types';
+import { fromOpenAi, toOpenAi, OpenAiComputerCall } from '../../../src/tools/adapters/openai';
+import { ToolResult } from '../../../src/tools/types';
 
 describe('OpenAI Adapter', () => {
   it('should convert from OpenAI batch of actions', () => {

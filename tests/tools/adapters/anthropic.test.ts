@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import { fromAnthropic, toAnthropic, AnthropicToolUse } from './anthropic';
-import { ToolResult } from '../types';
+import { fromAnthropic, toAnthropic, AnthropicToolUse } from '../../../src/tools/adapters/anthropic';
+import { ToolResult } from '../../../src/tools/types';
 
 describe('Anthropic Adapter', () => {
   it('should convert from Anthropic (including batch)', () => {
