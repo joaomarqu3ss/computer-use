@@ -33,7 +33,7 @@ export function executeCanonicalCall(call: ToolCall): ToolResult {
   try {
     const parsed = JSON.parse(output);
     return parsed as ToolResult;
-  } catch (_e) {
+  } catch {
     return {
       id: call.id,
       is_error: true,

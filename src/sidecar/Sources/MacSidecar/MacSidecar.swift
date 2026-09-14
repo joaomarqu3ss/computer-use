@@ -3,6 +3,19 @@ import Cocoa
 import CoreGraphics
 import ApplicationServices
 
+let keyMap: [String: CGKeyCode] = [
+    "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7, "c": 8, "v": 9,
+    "b": 11, "q": 12, "w": 13, "e": 14, "r": 15, "y": 16, "t": 17, "1": 18, "2": 19,
+    "3": 20, "4": 21, "6": 22, "5": 23, "=": 24, "9": 25, "7": 26, "-": 27, "8": 28,
+    "0": 29, "]": 30, "o": 31, "u": 32, "[": 33, "i": 34, "p": 35, "l": 37, "j": 38,
+    "'": 39, "k": 40, ";": 41, "\\": 42, ",": 43, "/": 44, "n": 45, "m": 46, ".": 47,
+    "space": 49, "return": 36, "enter": 36, "tab": 48, "backspace": 51, "escape": 53, "esc": 53,
+    "command": 55, "cmd": 55, "meta": 55, "super": 55, "shift": 56, "capslock": 57,
+    "option": 58, "alt": 58, "control": 59, "ctrl": 59, "rightshift": 60,
+    "rightoption": 61, "rightcontrol": 62, "fn": 63,
+    "up": 126, "down": 125, "left": 123, "right": 124
+]
+
 func checkPermissions() -> Bool {
     let trusted = AXIsProcessTrusted()
     var screenAccess = true
@@ -24,10 +37,20 @@ func getScreenScale() -> CGFloat {
     return NSScreen.main?.backingScaleFactor ?? 1.0
 }
 
-func handleScreenshot() -> [String: Any] {
+func handleScreenshot(region: [Double]? = nil) -> [String: Any] {
     let displayID = CGMainDisplayID()
-    guard let image = CGDisplayCreateImage(displayID) else {
+    guard var image = CGDisplayCreateImage(displayID) else {
         return ["is_error": true, "error": "Failed to capture screen"]
+    }
+    
+    if let r = region, r.count >= 4 {
+        // CoreGraphics coordinates for the full image
+        let rect = CGRect(x: r[0], y: r[1], width: r[2] - r[0], height: r[3] - r[1])
+        if let cropped = image.cropping(to: rect) {
+            image = cropped
+        } else {
+            return ["is_error": true, "error": "Invalid region for crop"]
+        }
     }
     
     let bitmapRep = NSBitmapImageRep(cgImage: image)
@@ -49,6 +72,17 @@ func getCurrentCursor() -> CGPoint {
     return event?.location ?? CGPoint.zero
 }
 
+func parseModifiers(_ text: String?) -> CGEventFlags {
+    guard let text = text else { return [] }
+    var flags = CGEventFlags()
+    let parts = text.lowercased().components(separatedBy: "+")
+    if parts.contains("shift") { flags.insert(.maskShift) }
+    if parts.contains("ctrl") || parts.contains("control") { flags.insert(.maskControl) }
+    if parts.contains("alt") || parts.contains("option") { flags.insert(.maskAlternate) }
+    if parts.contains("cmd") || parts.contains("command") || parts.contains("meta") || parts.contains("super") { flags.insert(.maskCommand) }
+    return flags
+}
+
 func handleAction(member: String, input: [String: Any]) -> [String: Any] {
     let scale = getScreenScale()
     
@@ -64,34 +98,36 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
     switch member {
     case "left_click", "right_click", "middle_click":
         let point = getPoint()
+        let flags = parseModifiers(input["text"] as? String)
         let button: CGMouseButton = member == "right_click" ? .right : (member == "middle_click" ? .center : .left)
         let downType: CGEventType = member == "right_click" ? .rightMouseDown : (member == "middle_click" ? .otherMouseDown : .leftMouseDown)
         let upType: CGEventType = member == "right_click" ? .rightMouseUp : (member == "middle_click" ? .otherMouseUp : .leftMouseUp)
         
         let down = CGEvent(mouseEventSource: source, mouseType: downType, mouseCursorPosition: point, mouseButton: button)
+        down?.flags = flags
         let up = CGEvent(mouseEventSource: source, mouseType: upType, mouseCursorPosition: point, mouseButton: button)
+        up?.flags = flags
         
         down?.post(tap: .cghidEventTap)
         up?.post(tap: .cghidEventTap)
         return ["text": "OK"]
         
-    case "double_click":
+    case "double_click", "triple_click":
         let point = getPoint()
-        let down1 = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)
-        down1?.setIntegerValueField(.mouseEventClickState, value: 1)
-        down1?.post(tap: .cghidEventTap)
+        let flags = parseModifiers(input["text"] as? String)
+        let clicks = member == "triple_click" ? 3 : 2
         
-        let up1 = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)
-        up1?.setIntegerValueField(.mouseEventClickState, value: 1)
-        up1?.post(tap: .cghidEventTap)
-        
-        let down2 = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)
-        down2?.setIntegerValueField(.mouseEventClickState, value: 2)
-        down2?.post(tap: .cghidEventTap)
-        
-        let up2 = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)
-        up2?.setIntegerValueField(.mouseEventClickState, value: 2)
-        up2?.post(tap: .cghidEventTap)
+        for i in 1...clicks {
+            let down = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)
+            down?.flags = flags
+            down?.setIntegerValueField(.mouseEventClickState, value: Int64(i))
+            down?.post(tap: .cghidEventTap)
+            
+            let up = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)
+            up?.flags = flags
+            up?.setIntegerValueField(.mouseEventClickState, value: Int64(i))
+            up?.post(tap: .cghidEventTap)
+        }
         return ["text": "OK"]
         
     case "mouse_move":
@@ -132,7 +168,9 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
         
     case "type":
         guard let text = input["text"] as? String else { return ["is_error": true, "error": "Missing text"] }
-        let scriptStr = "tell application \"System Events\" to keystroke \"\(text.replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\\", with: "\\\\"))\""
+        // Escape backslashes first, then quotes
+        let escapedText = text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let scriptStr = "tell application \"System Events\" to keystroke \"\(escapedText)\""
         var error: NSDictionary?
         if let script = NSAppleScript(source: scriptStr) {
             script.executeAndReturnError(&error)
@@ -144,10 +182,10 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
         
     case "key":
         guard let text = input["text"] as? String else { return ["is_error": true, "error": "Missing text"] }
+        let repeatCount = input["repeat"] as? Int ?? 1
         var appleScriptCommand = ""
         let lower = text.lowercased()
         
-        // Very basic mapping for special keys
         let specialKeys: [String: Int] = [
             "return": 36, "enter": 36, "tab": 48, "space": 49,
             "escape": 53, "esc": 53, "backspace": 51,
@@ -157,7 +195,6 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
         if let keyCode = specialKeys[lower] {
             appleScriptCommand = "tell application \"System Events\" to key code \(keyCode)"
         } else {
-            // Check for combinations like ctrl+c
             let parts = lower.components(separatedBy: "+")
             if parts.count > 1 {
                 let char = parts.last!
@@ -179,13 +216,51 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
         
         var error: NSDictionary?
         if let script = NSAppleScript(source: appleScriptCommand) {
-            script.executeAndReturnError(&error)
-            if let err = error {
-                return ["is_error": true, "error": "AppleScript error: \(err)"]
+            for _ in 0..<repeatCount {
+                script.executeAndReturnError(&error)
+                if let err = error {
+                    return ["is_error": true, "error": "AppleScript error: \(err)"]
+                }
             }
         }
         return ["text": "OK"]
         
+    case "hold_key":
+        guard let text = input["text"] as? String, let duration = input["duration"] as? Double else {
+            return ["is_error": true, "error": "Missing text or duration"]
+        }
+        
+        // We need a robust CGEvent mapping for hold_key
+        var keysToHold = [CGKeyCode]()
+        let parts = text.lowercased().components(separatedBy: "+")
+        for part in parts {
+            if let code = keyMap[part] {
+                keysToHold.append(code)
+            }
+        }
+        
+        if keysToHold.isEmpty {
+            // fallback: return unsupported explicitly
+            return ["is_error": true, "error": "Unsupported key for hold_key: \(text)"]
+        }
+        
+        // Press down
+        for code in keysToHold {
+            if let down = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true) {
+                down.post(tap: .cghidEventTap)
+            }
+        }
+        
+        usleep(useconds_t(duration * 1000000.0))
+        
+        // Release
+        for code in keysToHold.reversed() {
+            if let up = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) {
+                up.post(tap: .cghidEventTap)
+            }
+        }
+        return ["text": "OK"]
+
     case "scroll":
         guard let amount = input["scroll_amount"] as? Int, let direction = input["scroll_direction"] as? String else {
             return ["is_error": true, "error": "Missing scroll details"]
@@ -215,8 +290,9 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
         usleep(useconds_t(duration * 1000000.0))
         return ["text": "OK"]
         
-    case "screenshot":
-        return handleScreenshot()
+    case "screenshot", "zoom":
+        let region = input["region"] as? [Double]
+        return handleScreenshot(region: region)
         
     default:
         return ["is_error": true, "error": "Unsupported member: \(member)"]

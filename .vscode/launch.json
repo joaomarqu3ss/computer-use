@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:computer-use}/src/sidecar",
+            "name": "Debug MacSidecar (src/sidecar)",
+            "target": "MacSidecar",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug MacSidecar (src/sidecar)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:computer-use}/src/sidecar",
+            "name": "Release MacSidecar (src/sidecar)",
+            "target": "MacSidecar",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release MacSidecar (src/sidecar)"
+        }
+    ]
+}

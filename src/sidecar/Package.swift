@@ -9,5 +9,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "MacSidecar"),
+        .testTarget(
+            name: "MacSidecarTests",
+            dependencies: ["MacSidecar"]),
     ]
 )
