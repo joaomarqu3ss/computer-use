@@ -46,3 +46,10 @@ export type ToolResult = {
   base64_image?: string;
   toolset_name?: string;
 };
+
+// Ownership: the agent loop emits canonical ToolCalls/ToolResults WITHOUT
+// toolset_name. Provider adapters attach it (Anthropic: "computer").
+
+// Placeholder recorded for batch actions skipped after the first failure.
+export const NOT_EXECUTED_MESSAGE =
+  'Not executed: an earlier computer action in this turn failed.';

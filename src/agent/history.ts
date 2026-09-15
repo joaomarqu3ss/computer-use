@@ -1,4 +1,4 @@
-import { ToolCall, ToolResult } from '../tools/types';
+import { ToolCall, ToolResult, NOT_EXECUTED_MESSAGE } from '../tools/types';
 
 export interface TurnRecord {
   call: ToolCall;
@@ -6,56 +6,77 @@ export interface TurnRecord {
   turn: number;
 }
 
-function takeLast<T>(arr: T[], limit: number, isPlaceholder: (item: T) => boolean): T[] {
-  const nonPlaceholders = arr.filter(i => !isPlaceholder(i));
-  if (nonPlaceholders.length <= limit) return arr;
-  
-  const firstKept = nonPlaceholders[nonPlaceholders.length - limit];
-  const startIndex = arr.indexOf(firstKept);
-  return arr.slice(startIndex);
+export interface LoopLimits {
+  maxPerTurn?: number;
+  maxPerSession?: number;
 }
 
+export function isPlaceholderRecord(rec: TurnRecord): boolean {
+  return rec.result.error === NOT_EXECUTED_MESSAGE;
+}
+
+// Keeps the latest `limit` real records plus the latest `limit`
+// placeholders, preserving order. Quota is per kind by design: placeholders
+// never evict real records, and neither group grows without bound.
+function takeLatestPerKind(records: TurnRecord[], limit: number): TurnRecord[] {
+  const [real, placeholders] = partitionBy(records, (r) => !isPlaceholderRecord(r));
+  const kept = new Set<TurnRecord>([...real.slice(-limit), ...placeholders.slice(-limit)]);
+  return records.filter((r) => kept.has(r));
+}
+
+function partitionBy<T>(arr: T[], predicate: (item: T) => boolean): [T[], T[]] {
+  const matching: T[] = [];
+  const rest: T[] = [];
+  for (const item of arr) (predicate(item) ? matching : rest).push(item);
+  return [matching, rest];
+}
+
+const IMAGE_OMITTED_NOTE = '[Image omitted from history]';
+
 export class AgentHistory {
+  readonly maxPerTurn: number;
+  readonly maxPerSession: number;
   private records: TurnRecord[] = [];
 
-  constructor(
-    public maxPerTurn: number = 10,
-    public maxPerSession: number = 50
-  ) {}
+  constructor(limits: LoopLimits = {}) {
+    this.maxPerTurn = limits.maxPerTurn ?? 10;
+    this.maxPerSession = limits.maxPerSession ?? 50;
+  }
 
   add(record: TurnRecord): void {
     this.records.push(record);
   }
 
   getAll(): TurnRecord[] {
-    return this.records;
+    return [...this.records];
   }
 
   truncateHistory(currentTurn: number): void {
-    // W1: trocar base64_image de entradas antigas por resumo
-    for (const rec of this.records) {
-      if (rec.turn < currentTurn && rec.result.base64_image) {
-        delete rec.result.base64_image;
-        rec.result.text = (rec.result.text ? rec.result.text + '\n' : '') + '[Image omitted from history]';
-      }
-    }
+    // Release images from older turns by replacing stored records: the
+    // caller's objects are never mutated, and the key is dropped entirely
+    // (same shape as stripImage produces).
+    this.records = this.records.map((rec) => {
+      if (!(rec.turn < currentTurn && rec.result.base64_image)) return rec;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { base64_image: _omitted, ...rest } = rec.result;
+      return {
+        ...rec,
+        result: { ...rest, text: [rest.text, IMAGE_OMITTED_NOTE].filter(Boolean).join('\n') },
+      };
+    });
 
-    // W1: excluir placeholders da cota
-    // The skipped actions (Not executed...) are the placeholders to exclude from quota.
-    const isPlaceholder = (rec: TurnRecord) => rec.result.error === "Not executed: an earlier computer action in this turn failed.";
-
-    const turnGroups = new Map<number, TurnRecord[]>();
+    const byTurn = new Map<number, TurnRecord[]>();
     for (const item of this.records) {
-      if (!turnGroups.has(item.turn)) turnGroups.set(item.turn, []);
-      turnGroups.get(item.turn)!.push(item);
-    }
-    
-    this.records = [];
-    for (const items of turnGroups.values()) {
-      const kept = takeLast(items, this.maxPerTurn, isPlaceholder);
-      this.records.push(...kept);
+      const group = byTurn.get(item.turn);
+      if (group) group.push(item);
+      else byTurn.set(item.turn, [item]);
     }
 
-    this.records = takeLast(this.records, this.maxPerSession, isPlaceholder);
+    this.records = [];
+    for (const items of byTurn.values()) {
+      this.records.push(...takeLatestPerKind(items, this.maxPerTurn));
+    }
+
+    this.records = takeLatestPerKind(this.records, this.maxPerSession);
   }
 }
