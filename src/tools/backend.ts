@@ -11,6 +11,7 @@ const SIDECAR_PATH = join(__dirname, __dirname.includes('dist') ? '../../../src/
 export function executeCanonicalCall(call: ToolCall): ToolResult {
   const result = spawnSync(SIDECAR_PATH, [JSON.stringify(call)], {
     encoding: 'utf8',
+    maxBuffer: 50 * 1024 * 1024,
   });
 
   if (result.error) {
