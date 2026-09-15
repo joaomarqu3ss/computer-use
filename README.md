@@ -1,4 +1,4 @@
-# computer-use
+# Computer Use
 
 Harness de `computer use` (operar a interface via screenshot + mouse/teclado) para ferramentas agênticas que ainda não têm a funcionalidade. Escopo inicial: **macOS apenas**.
 
