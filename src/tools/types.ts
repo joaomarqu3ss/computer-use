@@ -44,4 +44,5 @@ export type ToolResult = {
   error?: string;
   text?: string;
   base64_image?: string;
+  toolset_name?: string;
 };
