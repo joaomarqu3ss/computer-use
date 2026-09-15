@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "computer-use": {
+      "command": "node",
+      "args": ["/Users/joaomarques/projects/computer-use/dist/src/mcp-server.js"]
+    }
+  }
+}
