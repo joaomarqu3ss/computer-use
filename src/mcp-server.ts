@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { executeCanonicalCall, checkPermissions } from './tools/backend.js';
+import { toolResultToMcpContent } from './tools/mcp-content.js';
 import { ToolCall } from './tools/types.js';
 
 const server = new Server({ name: 'computer-use', version: '1.0.0' }, { capabilities: { tools: {} } });
@@ -48,19 +49,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (result.is_error) {
       return { isError: true, content: [{ type: 'text', text: result.error || 'Unknown error' }] };
     }
-    
-    const content: Array<{ type: "text" | "image" | "resource"; text?: string; data?: string; mimeType?: string }> = [];
-    if (result.text) {
-      content.push({ type: 'text', text: result.text });
-    }
-    if (result.base64_image) {
-      content.push({ type: 'image', data: result.base64_image, mimeType: 'image/png' });
-    }
-    if (content.length === 0) {
-      content.push({ type: 'text', text: 'Success' });
-    }
-    
-    return { content };
+
+    return { content: toolResultToMcpContent(result) };
   }
   return { isError: true, content: [{ type: 'text', text: 'Unknown tool' }] };
 });

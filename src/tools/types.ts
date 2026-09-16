@@ -44,6 +44,8 @@ export type ToolResult = {
   error?: string;
   text?: string;
   base64_image?: string;
+  /** Image encoding; absent means PNG. Stream frames arrive as JPEG (ADR-0005). */
+  imageFormat?: ImageFormat;
   toolset_name?: string;
 };
 
@@ -53,3 +55,14 @@ export type ToolResult = {
 // Placeholder recorded for batch actions skipped after the first failure.
 export const NOT_EXECUTED_MESSAGE =
   'Not executed: an earlier computer action in this turn failed.';
+
+/** Image encoding; absent means PNG. Stream frames arrive as JPEG (ADR-0005). */
+export type ImageFormat = 'png' | 'jpeg';
+
+export function mimeForImageFormat(format?: ImageFormat): 'image/png' | 'image/jpeg' {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/png';
+}
+
+export function shortMimeForImageFormat(format?: ImageFormat): 'png' | 'jpeg' {
+  return format === 'jpeg' ? 'jpeg' : 'png';
+}

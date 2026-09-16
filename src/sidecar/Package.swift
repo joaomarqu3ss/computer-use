@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "MacSidecar",
     platforms: [
-        .macOS(.v11)
+        .macOS(.v14)
     ],
     targets: [
         .executableTarget(

@@ -84,14 +84,14 @@ O servidor fala MCP via stdio (entrada/saída padrão, que significa comunicaç�
 
 Entrada: `{ "member": "<ação>", "input": { ... } }`. Os 17 members: `screenshot`, `zoom`, `left_click`, `right_click`, `middle_click`, `double_click`, `triple_click`, `left_click_drag`, `mouse_move`, `left_mouse_down`, `left_mouse_up`, `cursor_position`, `scroll`, `type`, `key`, `hold_key`, `wait`.
 
-Saída: texto (`OK`), imagem (`screenshot`/`zoom` em base64 — codificação de binário em texto) ou erro (`is_error`, que significa indicador de erro). Via MCP cada chamada = uma ação; sequência, foto por turno e verificação vivem no `AgentLoop` nas integrações diretas.
+Saída: texto (`OK`), imagem (`screenshot`/`zoom` em base64 — codificação de binário em texto — JPEG com `imageFormat: "jpeg"`) ou erro (`is_error`, que significa indicador de erro). Via MCP cada chamada = uma ação; sequência, foto por turno e verificação vivem no `AgentLoop` nas integrações diretas. Durante `run()` o loop mantém uma sessão overlay (stream ScreenCaptureKit + halo de clique, ver ADR-0005); `COMPUTER_USE_NO_OVERLAY=1` força headless (sem interface, que significa sem janela) e `COMPUTER_USE_LEGACY_CAPTURE=1` volta à captura legada.
 
 ## Mapa do repo
 
 - `src/mcp-server.ts` — plugue MCP (`computer_action`).
-- `src/tools/` — protocolo canônico (`types.ts`), adaptadores Anthropic/OpenAI, ponte do sidecar (`backend.ts`).
+- `src/tools/` — protocolo canônico (`types.ts`), adaptadores Anthropic/OpenAI, ponte do sidecar (`backend.ts` com sessão daemon), overlay (`overlay.ts`), conteúdo MCP (`mcp-content.ts`).
 - `src/agent/` — loop, histórico com cleaner (rotina de limpeza) e limites.
-- `src/sidecar/` — Swift (captura + input nativo).
+- `src/sidecar/` — Swift (captura ScreenCaptureKit + JPEG, input nativo, modo `daemon` com overlay fantasma).
 - `tests/` — espelha `src/`.
 - `docs/reference/` — docs vendored (cópias locais) da OpenAI e Anthropic.
 - `docs/adr/` — decisões (macOS-first, permissões, protocolo, híbrido).

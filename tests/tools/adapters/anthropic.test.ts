@@ -65,4 +65,14 @@ describe('Anthropic Adapter', () => {
       content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'base64data' } }]
     });
   });
+
+  it('labels stream frames as jpeg', () => {
+    const result = toAnthropic([{ id: 'call_9', base64_image: 'jpegdata', imageFormat: 'jpeg' }]);
+    expect(result[0]).toEqual({
+      type: 'tool_result',
+      tool_use_id: 'call_9',
+      toolset_name: 'computer',
+      content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'jpegdata' } }]
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { ToolCall, ToolResult, Member } from '../types';
+import { ToolCall, ToolResult, Member, mimeForImageFormat } from '../types';
 
 export interface AnthropicToolUse {
   type: 'tool_use';
@@ -37,7 +37,7 @@ export function toAnthropic(results: ToolResult[]): AnthropicToolResult[] {
           type: "image",
           source: {
             type: "base64",
-            media_type: "image/png",
+            media_type: mimeForImageFormat(res.imageFormat),
             data: res.base64_image,
           },
         },

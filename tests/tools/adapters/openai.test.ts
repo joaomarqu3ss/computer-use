@@ -58,6 +58,24 @@ describe('OpenAI Adapter', () => {
     });
   });
 
+  it('should label stream frames as jpeg', () => {
+    const input: ToolResult[] = [
+      { id: 'call_2_0', base64_image: 'jpegdata', imageFormat: 'jpeg' }
+    ];
+
+    const result = toOpenAi(input);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      type: 'computer_call_output',
+      call_id: 'call_2',
+      output: {
+        type: 'computer_screenshot',
+        image_url: 'data:image/jpeg;base64,jpegdata',
+        detail: 'original'
+      }
+    });
+  });
+
   it('should convert to OpenAI output (error aborts batch)', () => {
     const input: ToolResult[] = [
       { id: 'call_1_0', text: 'OK' },

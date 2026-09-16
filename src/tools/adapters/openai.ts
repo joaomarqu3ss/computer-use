@@ -1,4 +1,4 @@
-import { ToolCall, ToolResult } from '../types';
+import { ToolCall, ToolResult, shortMimeForImageFormat } from '../types';
 
 export interface OpenAiAction {
   type: "click" | "double_click" | "drag" | "move" | "scroll" | "type" | "wait" | "keypress" | "screenshot";
@@ -182,12 +182,13 @@ export function toOpenAi(results: ToolResult[]): OpenAiComputerCallOutput[] {
     const imageResult = groupResults.slice().reverse().find(r => r.base64_image);
     
     if (imageResult) {
+      const mime = shortMimeForImageFormat(imageResult.imageFormat);
       outputs.push({
         type: "computer_call_output",
         call_id,
         output: {
           type: "computer_screenshot",
-          image_url: `data:image/png;base64,${imageResult.base64_image}`,
+          image_url: `data:image/${mime};base64,${imageResult.base64_image}`,
           detail: "original"
         }
       });

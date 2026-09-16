@@ -38,28 +38,22 @@ func getScreenScale() -> CGFloat {
 }
 
 func handleScreenshot(region: [Double]? = nil) -> [String: Any] {
-    let displayID = CGMainDisplayID()
-    guard var image = CGDisplayCreateImage(displayID) else {
+    guard var image = captureScreenImage() else {
         return ["is_error": true, "error": "Failed to capture screen"]
     }
-    
-    if let r = region, r.count >= 4 {
-        // CoreGraphics coordinates for the full image
-        let rect = CGRect(x: r[0], y: r[1], width: r[2] - r[0], height: r[3] - r[1])
-        if let cropped = image.cropping(to: rect) {
-            image = cropped
-        } else {
+
+    if region != nil {
+        guard let cropped = cropImage(image, region: region) else {
             return ["is_error": true, "error": "Invalid region for crop"]
         }
+        image = cropped
     }
-    
-    let bitmapRep = NSBitmapImageRep(cgImage: image)
-    guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
-        return ["is_error": true, "error": "Failed to encode screen to PNG"]
+
+    guard let base64 = encodeJPEG(image) else {
+        return ["is_error": true, "error": "Failed to encode screen to JPEG"]
     }
-    
-    let base64 = pngData.base64EncodedString()
-    return ["base64_image": base64]
+
+    return ["base64_image": base64, "imageFormat": "jpeg"]
 }
 
 func mapCoordinate(_ coord: [Double]) -> CGPoint {
@@ -299,7 +293,7 @@ func handleAction(member: String, input: [String: Any]) -> [String: Any] {
     }
 }
 
-func main() {
+func runOneShot() {
     let args = CommandLine.arguments
     if args.count > 1 && args[1] == "check-permissions" {
         let ok = checkPermissions()
@@ -341,4 +335,14 @@ func main() {
     }
 }
 
-main()
+@main
+struct MacSidecarEntry {
+    static func main() {
+        let args = CommandLine.arguments
+        if args.count > 1 && args[1] == "daemon" {
+            runDaemon()
+        } else {
+            runOneShot()
+        }
+    }
+}
