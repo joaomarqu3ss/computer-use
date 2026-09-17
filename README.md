@@ -73,7 +73,29 @@ O servidor fala MCP via stdio (entrada/saída padrão, que significa comunicaç�
 3. `agy` autenticado + permissões do macOS concedidas.
 4. Confirme que a ferramenta `computer_action` aparece listada para o modelo.
 
-### Outras ferramentas (Opencode, Kimi Code, Muse Code...)
+### Opencode — segunda integração (issue #9)
+
+1. Faça o build acima (`dist/` + binário do sidecar).
+2. Copie `opencode.jsonc.example` para o escopo que o opencode lê — global (`~/.config/opencode/opencode.jsonc`, chave `mcp`) ou projeto (`opencode.jsonc` na raiz) — e troque `<caminho-do-repo>` pelo clone local:
+```jsonc
+{
+  "mcp": {
+    "computer-use": {
+      "type": "local",
+      "command": ["node", "<caminho-do-repo>/dist/src/mcp-server.js"],
+      "enabled": true
+    }
+  }
+}
+```
+(Na v2 o mesmo servidor vive em `mcp.servers` com `disabled` no lugar de `enabled`.)
+3. `opencode mcp list` deve mostrar `computer-use connected`.
+4. Garanta permissões do macOS para o processo que hospeda o servidor (cada binário vira uma entrada própria no TCC — Transparência, Consentimento e Controle, que significa o banco de permissões do macOS).
+5. Peça ao modelo uma ação de leitura (ex.: `screenshot`) e confira a imagem devolvida.
+
+Prova (2026-09-17, nesta máquina): `opencode run -m opencode/deepseek-v4-flash-vision-exp` (DeepSeek open-weights com leitura de imagem, via OpenCode Zen) executou `screenshot` + `cursor_position` via MCP sem intervenção — ambas as chamadas com sucesso, imagem recebida e coordenadas devolvidas. Clicar/digitar usam o mesmo encanamento ToolCall→backend→sidecar já coberto (`#4`, `#5`, `#7`); ações consequenciais exigem confirmação humana e ficaram fora da prova autônoma. Limitações registradas: precisão de clique e latência fim a fim do modelo não medidas aqui (one-shot local ~176ms, JPEG ~950KB em base64); roundtrip do modelo na casa de dezenas de segundos.
+
+### Outras ferramentas (Kimi Code, Muse Code...)
 
 1. Faça o build acima (`dist/` + binário do sidecar).
 2. Registre o envelope universal no formato de cliente MCP da ferramenta (campo de `command` + `args`).

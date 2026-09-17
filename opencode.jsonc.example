@@ -1,0 +1,15 @@
+{
+  // Envelope MCP da segunda integração (issue #9): Opencode + modelo aberto.
+  // Copie para o escopo que o opencode lê — global (~/.config/opencode/opencode.jsonc)
+  // ou projeto (opencode.jsonc na raiz) — e troque <caminho-do-repo> pelo clone local.
+  // Formato do cliente opencode 1.x: mcp.<nome> com type "local" + command array + enabled.
+  // Na v2 o mesmo servidor vive em mcp.servers com "disabled" no lugar de "enabled".
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "computer-use": {
+      "type": "local",
+      "command": ["node", "<caminho-do-repo>/dist/src/mcp-server.js"],
+      "enabled": true
+    }
+  }
+}
