@@ -95,6 +95,19 @@ O servidor fala MCP via stdio (entrada/saída padrão, que significa comunicaç�
 
 Prova (2026-09-17, nesta máquina): `opencode run -m opencode/deepseek-v4-flash-vision-exp` (DeepSeek open-weights com leitura de imagem, via OpenCode Zen) executou `screenshot` + `cursor_position` via MCP sem intervenção — ambas as chamadas com sucesso, imagem recebida e coordenadas devolvidas. Clicar/digitar usam o mesmo encanamento ToolCall→backend→sidecar já coberto (`#4`, `#5`, `#7`); ações consequenciais exigem confirmação humana e ficaram fora da prova autônoma. Limitações registradas: precisão de clique e latência fim a fim do modelo não medidas aqui (one-shot local ~176ms, JPEG ~950KB em base64); roundtrip do modelo na casa de dezenas de segundos.
 
+### Hermes Agent — terceira integração (issue #13)
+
+1. Faça o build acima (`dist/` + binário do sidecar).
+2. Registre o servidor via CLI (troque `<caminho-do-repo>` pelo clone local) ou adicione o trecho de `hermes-mcp.example.yaml` sob `mcp_servers:` em `~/.hermes/config.yaml`:
+```bash
+hermes mcp add computer-use --command node --args <caminho-do-repo>/dist/src/mcp-server.js
+```
+3. `hermes mcp list` deve mostrar `computer-use` habilitado; `hermes mcp test computer-use` deve conectar e descobrir `computer_action`.
+4. Garanta permissões do macOS para o processo que hospeda o servidor (cada binário vira uma entrada própria no TCC — Transparência, Consentimento e Controle, que significa o banco de permissões do macOS).
+5. Peça ao modelo uma ação de leitura (ex.: `screenshot`) e confira a imagem devolvida.
+
+Prova (2026-09-18, nesta máquina, Hermes Agent v0.21.3 com `hermes mcp list` vazio antes do registro): `hermes -z` com o modelo default local `deepseek-v4-flash` via provider `deepseek` (leitura de imagem nativa confirmada, sem precisar de variante vision) executou `screenshot` + `cursor_position` via MCP (`mcp__computer_use__computer_action`) sem intervenção — ambas as chamadas com sucesso, imagem recebida e coordenadas devolvidas (`[1034, 452]`); numa segunda chamada o modelo descreveu corretamente a tela (Terminal com a sessão OpenCode). Clicar/digitar usam o mesmo encanamento ToolCall→backend→sidecar já coberto (`#4`, `#5`, `#7`); ações consequenciais exigem confirmação humana e ficaram fora da prova autônoma. Limitações registradas: precisão de clique e latência fim a fim do modelo não medidas aqui (conexão MCP ~332ms no `mcp test`, JPEG ~558–686KB em 2940x1912 no cache do Hermes). Nota: o Hermes não está na lista de ferramentas-alvo do CONTEXT.md — vale como prova avulsa de genericidade do plugue.
+
 ### Outras ferramentas (Kimi Code, Muse Code...)
 
 1. Faça o build acima (`dist/` + binário do sidecar).

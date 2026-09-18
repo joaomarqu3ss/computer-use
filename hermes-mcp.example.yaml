@@ -1,0 +1,13 @@
+# Envelope MCP da terceira integração (issue #13): Hermes Agent + modelo aberto.
+# Adicione sob a chave `mcp_servers:` em ~/.hermes/config.yaml — ou via CLI:
+#   hermes mcp add computer-use --command node --args <caminho-do-repo>/dist/src/mcp-server.js
+# Troque <caminho-do-repo> pelo clone local.
+# Verificação: `hermes mcp list` deve mostrar `computer-use` habilitado;
+# `hermes mcp test computer-use` deve conectar e descobrir `computer_action`.
+# Formato do cliente Hermes: mcp_servers.<nome> com command + args + enabled.
+mcp_servers:
+  computer-use:
+    command: node
+    args:
+      - <caminho-do-repo>/dist/src/mcp-server.js
+    enabled: true
